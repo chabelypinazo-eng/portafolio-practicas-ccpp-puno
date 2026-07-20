@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#173a35">
+    <title>Portafolio de prácticas | Chabely Parizaca</title>
+    <meta name="description" content="Portafolio de prácticas preprofesionales de Chabely Dianeth Parizaca Pinaso en el Colegio de Contadores Públicos de Puno.">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <a class="skip-link" href="#app">Saltar al contenido</a>
+
+    <header class="site-header">
+      <div class="header-inner">
+        <a class="site-brand" href="#/inicio" aria-label="Ir al inicio">
+          <span class="university-mark" aria-label="Universidad Nacional del Altiplano Puno">
+            <strong>UNA</strong>
+            <small>PUNO</small>
+          </span>
+          <span class="brand-divider" aria-hidden="true"></span>
+          <img id="ccppLogo" alt="Colegio de Contadores Públicos de Puno">
+        </a>
+
+        <nav class="main-nav" aria-label="Navegación principal">
+          <a href="#/inicio" data-nav="inicio">Inicio</a>
+          <a href="#/ejes" data-nav="ejes">Ejes</a>
+          <a href="#/actividades" data-nav="actividades">Actividades</a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="app" tabindex="-1">
+      <div class="app-loading" role="status">Preparando portafolio...</div>
+    </main>
+
+    <footer class="site-footer">
+      <div>
+        <strong>Chabely Dianeth Parizaca Pinaso</strong>
+        <span>Comunicación Organizacional · 2026</span>
+      </div>
+      <a href="#/inicio">Volver al inicio</a>
+    </footer>
+
+    <div class="lightbox" id="lightbox" hidden aria-modal="true" role="dialog" aria-label="Vista ampliada">
+      <button class="icon-button lightbox-close" id="closeLightbox" type="button" aria-label="Cerrar imagen" title="Cerrar">×</button>
+      <img id="lightboxImage" alt="">
+      <p id="lightboxCaption"></p>
+    </div>
+
+    <noscript>Activa JavaScript para navegar por las actividades del portafolio.</noscript>
+    <script src="data.js"></script>
+    <script src="script.js"></script>
+  </body>
+</html>

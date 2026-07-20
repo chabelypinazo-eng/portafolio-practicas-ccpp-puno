@@ -1,0 +1,37 @@
+# ============================================================
+#  Configuración Netlify — CCPP Puno
+# ============================================================
+
+[build]
+  publish = "."          # raíz del proyecto es la carpeta publicada
+
+# ── Caché de assets estáticos ──────────────────────────────
+[[headers]]
+  for = "/recursos/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/*.css"
+  [headers.values]
+    Cache-Control = "public, max-age=86400, must-revalidate"
+
+[[headers]]
+  for = "/*.js"
+  [headers.values]
+    Cache-Control = "public, max-age=86400, must-revalidate"
+
+# ── Headers de seguridad ───────────────────────────────────
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options          = "SAMEORIGIN"
+    X-Content-Type-Options   = "nosniff"
+    X-XSS-Protection         = "1; mode=block"
+    Referrer-Policy          = "strict-origin-when-cross-origin"
+
+# ── Redireccionamiento SPA (por si se añaden rutas futuras) ──
+[[redirects]]
+  from   = "/*"
+  to     = "/index.html"
+  status = 200
