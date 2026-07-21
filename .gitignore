@@ -1,6 +1,7 @@
 .tools/
 .agents/
 .repo-git/
+__pycache__/
 actividades/
 activity-page.js
 

@@ -536,16 +536,6 @@ window.PRACTICE_DATA = {
           "thumb": "assets/thumbs/68e8d605e3e7.jpg"
         },
         {
-          "type": "video",
-          "name": "Día_2.mp4",
-          "path": "Actividad 9/Día_2.mp4"
-        },
-        {
-          "type": "video",
-          "name": "FDownloader.Net_AQNurN_qyWJdKbJPviTlWLDgd0WXQLocVDxD1q71B9_Z0VBGQva_RqTgbLYKNjT3fSLRErHnpIsxxj5ZnjsygzQzZTX7T4Fvm6M_720p_(HD).mp4",
-          "path": "Actividad 9/FDownloader.Net_AQNurN_qyWJdKbJPviTlWLDgd0WXQLocVDxD1q71B9_Z0VBGQva_RqTgbLYKNjT3fSLRErHnpIsxxj5ZnjsygzQzZTX7T4Fvm6M_720p_(HD).mp4"
-        },
-        {
           "type": "image",
           "name": "foto dia del padre v2.png",
           "path": "Actividad 9/foto dia del padre v2.png",
@@ -556,6 +546,26 @@ window.PRACTICE_DATA = {
           "name": "foto dia del padre.png",
           "path": "Actividad 9/foto dia del padre.png",
           "thumb": "assets/thumbs/954b58eec5bf.jpg"
+        },
+        {
+          "type": "video",
+          "name": "invitacion-dia-madre-web.mp4",
+          "path": "Actividad 9/invitacion-dia-madre-web.mp4"
+        },
+        {
+          "type": "video",
+          "name": "mensaje-dia-madre-decano-web.mp4",
+          "path": "Actividad 9/mensaje-dia-madre-decano-web.mp4"
+        },
+        {
+          "type": "video",
+          "name": "mensaje-dia-padre-decano-web.mp4",
+          "path": "Actividad 9/mensaje-dia-padre-decano-web.mp4"
+        },
+        {
+          "type": "video",
+          "name": "mensaje-dia-padre-web.mp4",
+          "path": "Actividad 9/mensaje-dia-padre-web.mp4"
         },
         {
           "type": "image",
@@ -572,7 +582,7 @@ window.PRACTICE_DATA = {
       ],
       "counts": {
         "images": 12,
-        "videos": 2,
+        "videos": 4,
         "documents": 0
       }
     },

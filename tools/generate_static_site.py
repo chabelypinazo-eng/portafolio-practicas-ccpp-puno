@@ -11,6 +11,12 @@ IMAGE_EXTS = {".png", ".jpg", ".jpeg"}
 VIDEO_EXTS = {".mp4", ".mov", ".webm"}
 DOC_EXTS = {".pdf", ".docx", ".xlsx", ".xls", ".html"}
 MAX_PUBLISHED_FILE_SIZE = 100 * 1024 * 1024
+VIDEO_SOURCES_WITH_WEB_COPY = {
+    "Actividad 9/DIA DE LA MADRE DECANO.mp4",
+    "Actividad 9/DIA de la madre.mp4",
+    "Actividad 9/Día_2.mp4",
+    "Actividad 9/FDownloader.Net_AQNurN_qyWJdKbJPviTlWLDgd0WXQLocVDxD1q71B9_Z0VBGQva_RqTgbLYKNjT3fSLRErHnpIsxxj5ZnjsygzQzZTX7T4Fvm6M_720p_(HD).mp4",
+}
 
 
 AXES = [
@@ -320,10 +326,12 @@ def collect_media(folder: str) -> list[dict[str, str]]:
         suffix = path.suffix.lower()
         if not path.is_file() or suffix not in IMAGE_EXTS | VIDEO_EXTS | DOC_EXTS:
             continue
+        relative = web_path(path)
+        if relative in VIDEO_SOURCES_WITH_WEB_COPY:
+            continue
         if path.stat().st_size > MAX_PUBLISHED_FILE_SIZE:
             continue
 
-        relative = web_path(path)
         if suffix in IMAGE_EXTS:
             files.append(
                 {

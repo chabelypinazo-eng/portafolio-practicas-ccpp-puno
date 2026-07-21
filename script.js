@@ -1,15 +1,69 @@
 const data = window.PRACTICE_DATA;
 const app = document.querySelector("#app");
 const ccppLogo = document.querySelector("#ccppLogo");
-const lightbox = document.querySelector("#lightbox");
-const lightboxImage = document.querySelector("#lightboxImage");
-const lightboxCaption = document.querySelector("#lightboxCaption");
-const closeLightboxButton = document.querySelector("#closeLightbox");
+const evidenceViewer = document.querySelector("#evidenceViewer");
+const viewerImage = document.querySelector("#viewerImage");
+const viewerVideo = document.querySelector("#viewerVideo");
+const viewerType = document.querySelector("#viewerType");
+const viewerTitle = document.querySelector("#viewerTitle");
+const viewerCounter = document.querySelector("#viewerCounter");
+const viewerCaption = document.querySelector("#viewerCaption");
+const viewerLoading = document.querySelector("#viewerLoading");
+const openEvidenceFile = document.querySelector("#openEvidenceFile");
+const closeEvidenceViewerButton = document.querySelector("#closeEvidenceViewer");
+const previousEvidenceButton = document.querySelector("#previousEvidence");
+const nextEvidenceButton = document.querySelector("#nextEvidence");
+const pdfBook = document.querySelector("#pdfBook");
+const bookPages = document.querySelector("#bookPages");
+const pdfPageLeft = document.querySelector("#pdfPageLeft");
+const pdfPageRight = document.querySelector("#pdfPageRight");
+const previousPdfPageButton = document.querySelector("#previousPdfPage");
+const nextPdfPageButton = document.querySelector("#nextPdfPage");
+const pdfPageStatus = document.querySelector("#pdfPageStatus");
 
 const activities = data.activities;
 const axes = data.axes;
 let activeAxisFilter = "Todos";
 let searchTerm = "";
+let pdfJsPromise;
+let viewerSession = 0;
+
+const viewerState = {
+  activity: null,
+  items: [],
+  index: 0,
+  pdfDocument: null,
+  pdfLoadingTask: null,
+  pdfRenderTasks: [],
+  pdfRenderVersion: 0,
+  pdfPage: 1,
+};
+
+const GOAL_STATS = {
+  1: [["6", "piezas registradas"], ["6", "evidencias visuales"], ["1", "saludo por fecha"]],
+  2: [["50+", "participantes"], ["5", "evidencias"], ["1", "video publicado"]],
+  3: [["6", "reuniones"], ["1", "frecuencia semanal"], ["4", "evidencias"]],
+  4: [["1", "canal digital"], ["2", "evidencias"], ["100%", "identificación opcional"]],
+  5: [["4", "sesiones mensuales previstas"], ["70%", "participación objetivo"], ["2", "registros"]],
+  6: [["3", "dinámicas ejecutadas"], ["3", "meses de aplicación"], ["70%", "participación objetivo"]],
+  7: [["1", "campaña activa"], ["S/ 0", "publicidad pagada"], ["6", "evidencias"]],
+  8: [["2", "sedes atendidas"], ["4", "registros visuales"], ["1", "archivo institucional"]],
+  9: [["2", "ceremonias coordinadas"], ["1", "curso especializado"], ["4", "evidencias"]],
+  10: [["1", "programa protocolar"], ["1", "conducción realizada"], ["4", "evidencias"]],
+  11: [["2", "acciones conmemorativas"], ["S/ 400", "presupuesto institucional"], ["16", "evidencias"]],
+  12: [["6", "disciplinas"], ["8", "delegaciones"], ["5", "registros visuales"]],
+  13: [["15", "medios como meta mínima"], ["1", "canal de prensa"], ["2", "evidencias"]],
+  14: [["14", "páginas producidas"], ["4", "páginas como meta mínima"], ["1", "edición digital"]],
+  15: [["1", "manual corporativo"], ["1", "archivo editable"], ["1", "versión PDF"]],
+  16: [["4", "periódicos murales"], ["4", "niveles actualizados"], ["12", "evidencias"]],
+  17: [["17", "videos producidos"], ["16", "videos planificados"], ["106%", "cumplimiento"]],
+  18: [["6", "transmisiones"], ["3", "colegiaturas"], ["2", "emisiones IA QUIPU"]],
+  19: [["4", "meses programados"], ["80%", "ejecución objetivo"], ["1", "calendario editorial"]],
+  20: [["5+", "propuestas"], ["1", "ficha de revisión"], ["6", "capturas"]],
+  21: [["5", "tipos de plantilla"], ["1", "guía básica"], ["5", "evidencias"]],
+  22: [["22", "evidencias visuales"], ["4", "meses atendidos"], ["0", "piezas con pauta pagada"]],
+  23: [["8", "delegaciones registradas"], ["6", "disciplinas"], ["2", "evidencias"]],
+};
 
 function assetPath(path) {
   return encodeURI(path);
@@ -308,38 +362,64 @@ function renderActivities() {
 
 function evidenceLabel(file) {
   if (file.type === "video") return "Video";
+  if (file.type === "image") return "Fotografía";
   const extension = file.name.split(".").pop()?.toUpperCase();
   return extension || "Archivo";
 }
 
-function renderEvidenceFiles(activity) {
-  const files = activity.media.filter((file) => file.type !== "image");
-  if (!files.length) return `<p class="empty-inline">Esta actividad no incluye archivos adicionales.</p>`;
+function evidenceItems(activity) {
+  const order = { image: 0, video: 1, document: 2 };
+  return [...activity.media].sort((a, b) => (order[a.type] ?? 3) - (order[b.type] ?? 3));
+}
+
+function friendlyFileName(file) {
+  const names = {
+    "invitacion-dia-madre-web.mp4": "Invitación por el Día de la Madre",
+    "mensaje-dia-madre-decano-web.mp4": "Mensaje del decano por el Día de la Madre",
+    "mensaje-dia-padre-decano-web.mp4": "Mensaje del decano por el Día del Padre",
+    "mensaje-dia-padre-web.mp4": "Video por el Día del Padre",
+  };
+  return names[file.name] || file.name.replace(/-web(?=\.[^.]+$)/i, "");
+}
+
+function renderGoalStats(activity) {
+  const stats = GOAL_STATS[activity.id] || [
+    [String(activity.counts.images + activity.counts.videos + activity.counts.documents), "evidencias"],
+    [String(activity.counts.images), "fotografías"],
+    [String(activity.counts.documents), "documentos"],
+  ];
 
   return `
-    <div class="file-list">
-      ${files.map((file) => `
-        <a href="${assetPath(file.path)}" target="_blank" rel="noopener">
-          <span>${escapeHTML(evidenceLabel(file))}</span>
-          <strong>${escapeHTML(file.name)}</strong>
-          <b aria-hidden="true">↗</b>
-        </a>
+    <div class="goal-stats" aria-label="Estadísticas de las metas alcanzadas">
+      ${stats.map(([value, label]) => `
+        <div>
+          <strong>${escapeHTML(value)}</strong>
+          <span>${escapeHTML(label)}</span>
+        </div>
       `).join("")}
     </div>
   `;
 }
 
-function renderGallery(activity) {
-  const images = activity.media.filter((file) => file.type === "image");
-  if (!images.length) return `<p class="empty-inline">Esta actividad no incluye imágenes.</p>`;
+function renderEvidenceNavigator(activity) {
+  const items = evidenceItems(activity);
+  if (!items.length) return `<p class="empty-inline">Esta actividad no incluye evidencias digitales.</p>`;
+  const total = items.length;
 
   return `
-    <div class="gallery">
-      ${images.map((file) => `
-        <button type="button" data-full="${assetPath(file.path)}" data-caption="${escapeHTML(activity.title)}">
-          <img src="${assetPath(file.thumb)}" alt="Evidencia de ${escapeHTML(activity.title)}" loading="lazy">
-        </button>
-      `).join("")}
+    <div class="evidence-navigator">
+      <div class="evidence-summary">
+        <p>${plural(total, "evidencia disponible", "evidencias disponibles")}</p>
+        <div aria-label="Tipos de evidencia">
+          <span><strong>${activity.counts.images}</strong> fotos</span>
+          <span><strong>${activity.counts.videos}</strong> videos</span>
+          <span><strong>${activity.counts.documents}</strong> PDF</span>
+        </div>
+      </div>
+      <button class="evidence-open" type="button" data-open-evidence="${activity.id}" data-evidence-index="0">
+        <span>ABRIR VISOR DE EVIDENCIAS</span>
+        <b aria-hidden="true">→</b>
+      </button>
     </div>
   `;
 }
@@ -352,6 +432,8 @@ function renderActivity(id) {
   }
 
   const cover = coverFor(activity);
+  const itemList = evidenceItems(activity);
+  const coverIndex = cover ? itemList.indexOf(cover) : 0;
   const related = activitiesForAxis(activity.axis).filter((item) => item.id !== activity.id).slice(0, 3);
   const previous = activities.find((item) => item.id === activity.id - 1);
   const next = activities.find((item) => item.id === activity.id + 1);
@@ -370,7 +452,7 @@ function renderActivity(id) {
           <span class="detail-axis">${escapeHTML(activity.axis)}</span>
         </div>
         ${cover ? `
-          <button class="detail-cover" type="button" data-full="${assetPath(cover.path)}" data-caption="${escapeHTML(activity.title)}">
+          <button class="detail-cover" type="button" data-open-evidence="${activity.id}" data-evidence-index="${coverIndex}">
             <img src="${assetPath(cover.thumb)}" alt="Evidencia principal de ${escapeHTML(activity.title)}">
           </button>
         ` : `<div class="detail-cover detail-cover-empty"><strong>${String(activity.id).padStart(2, "0")}</strong></div>`}
@@ -382,7 +464,7 @@ function renderActivity(id) {
           <button type="button" data-scroll="descripcion">Descripción</button>
           <button type="button" data-scroll="realizado">Lo realizado</button>
           <button type="button" data-scroll="metas">Metas alcanzadas</button>
-          <button type="button" data-scroll="evidencias">Evidencias</button>
+          <button class="detail-evidence-open" type="button" data-open-evidence="${activity.id}" data-evidence-index="0">Abrir evidencias →</button>
           <dl>
             <div><dt>Periodo</dt><dd>13 abr — 13 jul</dd></div>
             <div><dt>Materiales</dt><dd>${activity.counts.images + activity.counts.videos + activity.counts.documents}</dd></div>
@@ -404,6 +486,7 @@ function renderActivity(id) {
             <span>03</span>
             <h2>Metas alcanzadas</h2>
             <p>${escapeHTML(activity.goals)}</p>
+            ${renderGoalStats(activity)}
           </section>
           ${activity.observation ? `
             <aside class="detail-note">
@@ -414,8 +497,7 @@ function renderActivity(id) {
           <section id="evidencias" class="detail-section evidence-section">
             <span>04</span>
             <h2>Evidencias</h2>
-            ${renderEvidenceFiles(activity)}
-            ${renderGallery(activity)}
+            ${renderEvidenceNavigator(activity)}
           </section>
         </div>
       </div>
@@ -464,6 +546,7 @@ function updateNavigation(section) {
 }
 
 function renderRoute() {
+  if (!evidenceViewer.hidden) closeEvidenceViewer();
   const [section, value] = currentRoute();
   updateNavigation(section);
 
@@ -478,19 +561,216 @@ function renderRoute() {
   app.focus({ preventScroll: true });
 }
 
-function openLightbox(path, caption) {
-  lightboxImage.src = path;
-  lightboxImage.alt = caption;
-  lightboxCaption.textContent = caption;
-  lightbox.hidden = false;
-  document.body.classList.add("modal-open");
-  closeLightboxButton.focus();
+function loadPdfJs() {
+  if (!pdfJsPromise) {
+    pdfJsPromise = import("./assets/vendor/pdfjs/pdf.min.mjs").then((pdfjs) => {
+      pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+        "assets/vendor/pdfjs/pdf.worker.min.mjs",
+        document.baseURI
+      ).href;
+      return pdfjs;
+    });
+  }
+  return pdfJsPromise;
 }
 
-function closeLightbox() {
-  lightbox.hidden = true;
-  lightboxImage.src = "";
+function releasePdfDocument() {
+  viewerState.pdfRenderVersion += 1;
+  viewerState.pdfRenderTasks.forEach((task) => task.cancel());
+  viewerState.pdfRenderTasks = [];
+  if (viewerState.pdfLoadingTask) {
+    viewerState.pdfLoadingTask.destroy().catch(() => {});
+  } else if (viewerState.pdfDocument) {
+    viewerState.pdfDocument.destroy().catch(() => {});
+  }
+  viewerState.pdfLoadingTask = null;
+  viewerState.pdfDocument = null;
+  viewerState.pdfPage = 1;
+}
+
+function resetViewerMedia() {
+  viewerImage.hidden = true;
+  viewerImage.removeAttribute("src");
+  viewerVideo.pause();
+  viewerVideo.hidden = true;
+  viewerVideo.removeAttribute("src");
+  viewerVideo.load();
+  pdfBook.hidden = true;
+  bookPages.hidden = false;
+  viewerLoading.hidden = true;
+}
+
+async function renderPdfCanvas(pageNumber, canvas, session, renderVersion) {
+  const pdf = viewerState.pdfDocument;
+  if (!pdf || pageNumber > pdf.numPages) {
+    canvas.hidden = true;
+    return;
+  }
+
+  const page = await pdf.getPage(pageNumber);
+  if (session !== viewerSession || renderVersion !== viewerState.pdfRenderVersion) return;
+
+  const baseViewport = page.getViewport({ scale: 1 });
+  const singlePage = window.matchMedia("(max-width: 760px)").matches;
+  const availableWidth = singlePage
+    ? Math.min(window.innerWidth - 120, 620)
+    : Math.min((window.innerWidth - 260) / 2, 560);
+  const availableHeight = Math.max(280, window.innerHeight - (singlePage ? 240 : 210));
+  const cssScale = Math.max(
+    0.25,
+    Math.min(availableWidth / baseViewport.width, availableHeight / baseViewport.height)
+  );
+  const outputScale = Math.min(window.devicePixelRatio || 1, 1.75);
+  const viewport = page.getViewport({ scale: cssScale * outputScale });
+  const context = canvas.getContext("2d", { alpha: false });
+
+  canvas.width = Math.floor(viewport.width);
+  canvas.height = Math.floor(viewport.height);
+  canvas.style.width = `${Math.floor(viewport.width / outputScale)}px`;
+  canvas.style.height = `${Math.floor(viewport.height / outputScale)}px`;
+  canvas.hidden = false;
+
+  const renderTask = page.render({ canvasContext: context, viewport });
+  viewerState.pdfRenderTasks.push(renderTask);
+  try {
+    await renderTask.promise;
+  } finally {
+    viewerState.pdfRenderTasks = viewerState.pdfRenderTasks.filter((task) => task !== renderTask);
+  }
+}
+
+async function renderPdfSpread(direction = "") {
+  const pdf = viewerState.pdfDocument;
+  if (!pdf) return;
+
+  const session = viewerSession;
+  viewerState.pdfRenderTasks.forEach((task) => task.cancel());
+  viewerState.pdfRenderTasks = [];
+  const renderVersion = ++viewerState.pdfRenderVersion;
+  const singlePage = window.matchMedia("(max-width: 760px)").matches;
+  const rightPage = singlePage ? null : viewerState.pdfPage + 1;
+  viewerLoading.textContent = "Preparando páginas...";
+  viewerLoading.hidden = false;
+
+  if (direction) {
+    bookPages.classList.remove("turn-forward", "turn-backward");
+    void bookPages.offsetWidth;
+    bookPages.classList.add(direction === "next" ? "turn-forward" : "turn-backward");
+  }
+
+  try {
+    await Promise.all([
+      renderPdfCanvas(viewerState.pdfPage, pdfPageLeft, session, renderVersion),
+      rightPage ? renderPdfCanvas(rightPage, pdfPageRight, session, renderVersion) : Promise.resolve((pdfPageRight.hidden = true)),
+    ]);
+    if (session !== viewerSession || renderVersion !== viewerState.pdfRenderVersion) return;
+
+    const endPage = rightPage && rightPage <= pdf.numPages ? rightPage : viewerState.pdfPage;
+    pdfPageStatus.textContent = endPage === viewerState.pdfPage
+      ? `Página ${viewerState.pdfPage} de ${pdf.numPages}`
+      : `Páginas ${viewerState.pdfPage}–${endPage} de ${pdf.numPages}`;
+    previousPdfPageButton.disabled = viewerState.pdfPage <= 1;
+    nextPdfPageButton.disabled = endPage >= pdf.numPages;
+  } catch (error) {
+    if (session !== viewerSession || renderVersion !== viewerState.pdfRenderVersion) return;
+    pdfPageStatus.textContent = "No se pudieron preparar estas páginas.";
+  } finally {
+    if (session === viewerSession && renderVersion === viewerState.pdfRenderVersion) viewerLoading.hidden = true;
+  }
+}
+
+async function showPdf(item, session) {
+  pdfBook.hidden = false;
+  viewerLoading.textContent = "Preparando libro digital...";
+  viewerLoading.hidden = false;
+  pdfPageStatus.textContent = "Cargando documento...";
+
+  try {
+    const pdfjs = await loadPdfJs();
+    if (session !== viewerSession) return;
+    viewerState.pdfLoadingTask = pdfjs.getDocument({ url: assetPath(item.path) });
+    viewerState.pdfDocument = await viewerState.pdfLoadingTask.promise;
+    viewerState.pdfLoadingTask = null;
+    if (session !== viewerSession) return;
+    viewerState.pdfPage = 1;
+    await renderPdfSpread();
+  } catch (error) {
+    if (session !== viewerSession) return;
+    bookPages.hidden = true;
+    pdfPageStatus.textContent = "No se pudo cargar el libro aquí. Usa el icono ↗ para abrir el PDF original.";
+    viewerLoading.hidden = true;
+  }
+}
+
+function updateEvidenceViewer() {
+  const item = viewerState.items[viewerState.index];
+  if (!item || !viewerState.activity) return;
+
+  const session = ++viewerSession;
+  releasePdfDocument();
+  resetViewerMedia();
+
+  viewerType.textContent = evidenceLabel(item).toUpperCase();
+  viewerTitle.textContent = friendlyFileName(item);
+  viewerCounter.textContent = `${viewerState.index + 1} / ${viewerState.items.length}`;
+  viewerCaption.textContent = `Actividad ${String(viewerState.activity.id).padStart(2, "0")} · ${viewerState.activity.title}`;
+  openEvidenceFile.href = assetPath(item.path);
+  previousEvidenceButton.disabled = viewerState.items.length < 2;
+  nextEvidenceButton.disabled = viewerState.items.length < 2;
+
+  if (item.type === "image") {
+    viewerImage.src = assetPath(item.path);
+    viewerImage.alt = `Evidencia de ${viewerState.activity.title}`;
+    viewerImage.hidden = false;
+  } else if (item.type === "video") {
+    viewerVideo.src = assetPath(item.path);
+    viewerVideo.hidden = false;
+    viewerVideo.load();
+  } else if (item.name.toLowerCase().endsWith(".pdf")) {
+    showPdf(item, session);
+  }
+}
+
+function openEvidenceViewer(activityId, index = 0) {
+  const activity = activities.find((item) => item.id === Number(activityId));
+  const items = activity ? evidenceItems(activity) : [];
+  if (!activity || !items.length) return;
+
+  viewerState.activity = activity;
+  viewerState.items = items;
+  viewerState.index = Math.min(Math.max(Number(index) || 0, 0), items.length - 1);
+  evidenceViewer.hidden = false;
+  document.body.classList.add("modal-open");
+  updateEvidenceViewer();
+  closeEvidenceViewerButton.focus();
+}
+
+function changeEvidence(step) {
+  if (viewerState.items.length < 2) return;
+  viewerState.index = (viewerState.index + step + viewerState.items.length) % viewerState.items.length;
+  updateEvidenceViewer();
+}
+
+function closeEvidenceViewer() {
+  viewerSession += 1;
+  releasePdfDocument();
+  resetViewerMedia();
+  evidenceViewer.hidden = true;
+  viewerState.activity = null;
+  viewerState.items = [];
   document.body.classList.remove("modal-open");
+}
+
+function changePdfPages(direction) {
+  const pdf = viewerState.pdfDocument;
+  if (!pdf) return;
+  const step = window.matchMedia("(max-width: 760px)").matches ? 1 : 2;
+  const nextPage = direction === "next"
+    ? Math.min(viewerState.pdfPage + step, pdf.numPages)
+    : Math.max(1, viewerState.pdfPage - step);
+  if (nextPage === viewerState.pdfPage) return;
+  viewerState.pdfPage = nextPage;
+  renderPdfSpread(direction);
 }
 
 app.addEventListener("click", (event) => {
@@ -500,16 +780,45 @@ app.addEventListener("click", (event) => {
     return;
   }
 
-  const preview = event.target.closest("[data-full]");
-  if (preview) openLightbox(preview.dataset.full, preview.dataset.caption || "Evidencia");
+  const evidenceControl = event.target.closest("[data-open-evidence]");
+  if (evidenceControl) {
+    openEvidenceViewer(evidenceControl.dataset.openEvidence, evidenceControl.dataset.evidenceIndex);
+  }
 });
 
-closeLightboxButton.addEventListener("click", closeLightbox);
-lightbox.addEventListener("click", (event) => {
-  if (event.target === lightbox) closeLightbox();
+closeEvidenceViewerButton.addEventListener("click", closeEvidenceViewer);
+previousEvidenceButton.addEventListener("click", () => changeEvidence(-1));
+nextEvidenceButton.addEventListener("click", () => changeEvidence(1));
+previousPdfPageButton.addEventListener("click", () => changePdfPages("previous"));
+nextPdfPageButton.addEventListener("click", () => changePdfPages("next"));
+evidenceViewer.addEventListener("click", (event) => {
+  if (event.target === evidenceViewer) closeEvidenceViewer();
 });
 document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape" && !lightbox.hidden) closeLightbox();
+  if (evidenceViewer.hidden) return;
+  if (event.key === "Escape") {
+    closeEvidenceViewer();
+    return;
+  }
+  if (event.target === viewerVideo) return;
+
+  const inBookControls = event.target.closest?.(".book-controls");
+  if (event.key === "ArrowLeft") {
+    event.preventDefault();
+    inBookControls ? changePdfPages("previous") : changeEvidence(-1);
+  }
+  if (event.key === "ArrowRight") {
+    event.preventDefault();
+    inBookControls ? changePdfPages("next") : changeEvidence(1);
+  }
+});
+
+let pdfResizeTimer;
+window.addEventListener("resize", () => {
+  clearTimeout(pdfResizeTimer);
+  pdfResizeTimer = setTimeout(() => {
+    if (!evidenceViewer.hidden && viewerState.pdfDocument) renderPdfSpread();
+  }, 180);
 });
 
 ccppLogo.src = assetPath(data.logo);
