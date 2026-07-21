@@ -101,64 +101,78 @@ function pageIntro(kicker, title, copy = "") {
 }
 
 function renderHome() {
-  const featured = [activities[9], activities[16], activities[22]].filter(Boolean);
-  const heroCover = coverFor(activities[9]) || coverFor(activities[7]);
-
   document.title = "Portafolio de prácticas | Chabely Parizaca";
   app.innerHTML = `
-    <section class="home-hero" style="--hero-image: url('${assetPath(heroCover?.path || data.hero)}')">
-      <div class="hero-inner">
-        <p class="hero-kicker">Comunicación Organizacional · 2026</p>
-        <h1>Prácticas<br>preprofesionales</h1>
-        <p class="hero-lead">Colegio de Contadores Públicos de Puno</p>
-        <div class="practitioner-line">
-          <span>Practicante</span>
-          <strong>${escapeHTML(data.practitioner)}</strong>
+    <section class="profile-hero">
+      <div class="profile-hero-inner content-width">
+        <div class="profile-photo" aria-label="Espacio para la fotografía de Chabely">
+          ${data.practitionerPhoto
+            ? `<img src="${assetPath(data.practitionerPhoto)}" alt="Chabely Dianeth Parizaca Pinaso">`
+            : `<div class="profile-photo-placeholder" aria-hidden="true"><span>CP</span></div>`}
+          <small>Fotografía de la practicante</small>
         </div>
-        <div class="hero-actions">
-          <a class="button button-primary" href="#/ejes">Explorar ejes</a>
-          <a class="button button-ghost" href="#/actividades">Ver actividades</a>
-        </div>
-      </div>
-      <div class="hero-period" aria-label="Periodo de prácticas">
-        <span>Inicio<br><strong>13 abr</strong></span>
-        <i aria-hidden="true"></i>
-        <span>Fin<br><strong>13 jul</strong></span>
-      </div>
-    </section>
 
-    <section class="home-summary content-width" aria-label="Resumen">
-      <div><strong>23</strong><span>actividades</span></div>
-      <div><strong>8</strong><span>ejes de trabajo</span></div>
-      <div><strong>3 meses</strong><span>de experiencia</span></div>
-      <p>Una experiencia enfocada en comunicación interna, protocolo, identidad, contenidos y presencia digital.</p>
-    </section>
+        <div class="profile-copy">
+          <p class="kicker">Portafolio de prácticas preprofesionales</p>
+          <h1>${escapeHTML(data.practitioner)}</h1>
+          <p class="profile-subtitle">Comunicación organizacional aplicada a la vida institucional.</p>
 
-    <section class="section content-width">
-      <div class="section-heading compact-heading">
-        <div>
-          <p class="kicker">Áreas de experiencia</p>
-          <h2>Explora por eje</h2>
-        </div>
-        <a class="text-link" href="#/ejes">Ver descripción de todos <span aria-hidden="true">→</span></a>
-      </div>
-      <div class="axis-list home-axis-list">
-        ${axes.map((axis, index) => axisLink(axis, index)).join("")}
-      </div>
-    </section>
+          <dl class="practice-facts">
+            <div>
+              <dt>Centro de prácticas</dt>
+              <dd>Colegio de Contadores Públicos de Puno</dd>
+            </div>
+            <div>
+              <dt>Periodo</dt>
+              <dd>13 de abril — 13 de julio de 2026</dd>
+            </div>
+            <div>
+              <dt>Área</dt>
+              <dd>Comunicación Organizacional</dd>
+            </div>
+          </dl>
 
-    <section class="section section-tint">
-      <div class="content-width">
-        <div class="section-heading compact-heading">
-          <div>
-            <p class="kicker">Trabajo realizado</p>
-            <h2>Actividades destacadas</h2>
+          <div class="profile-actions">
+            <button class="button button-dark" type="button" data-scroll="indice">Ver índice</button>
+            <a class="text-link" href="#/actividades">Explorar las 23 actividades <span aria-hidden="true">→</span></a>
           </div>
-          <a class="text-link" href="#/actividades">Ver las 23 actividades <span aria-hidden="true">→</span></a>
         </div>
-        <div class="activity-grid featured-grid">
-          ${featured.map(activityCard).join("")}
+      </div>
+    </section>
+
+    <section class="portfolio-index content-width" id="indice">
+      <div class="index-heading">
+        <div>
+          <p class="kicker">Índice del portafolio</p>
+          <h2>Ejes y actividades</h2>
         </div>
+        <p>Selecciona un eje para conocer su propósito o abre directamente una actividad.</p>
+      </div>
+
+      <div class="index-grid">
+        ${axes.map((axis, index) => {
+          const axisActivities = activitiesForAxis(axis.name);
+          return `
+            <article class="index-axis accent-${escapeHTML(axis.accent)}">
+              <a class="index-axis-title" href="${routeForAxis(axis.name)}">
+                <span>${String(index + 1).padStart(2, "0")}</span>
+                <strong>${escapeHTML(axis.name)}</strong>
+                <small>${plural(axisActivities.length, "actividad", "actividades")}</small>
+                <b aria-hidden="true">→</b>
+              </a>
+              <ol>
+                ${axisActivities.map((activity) => `
+                  <li>
+                    <a href="${routeForActivity(activity.id)}">
+                      <span>${String(activity.id).padStart(2, "0")}</span>
+                      <strong>${escapeHTML(activity.title)}</strong>
+                    </a>
+                  </li>
+                `).join("")}
+              </ol>
+            </article>
+          `;
+        }).join("")}
       </div>
     </section>
   `;
